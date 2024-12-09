@@ -1,0 +1,339 @@
+# Loading all libraries  --------------------------------------------------
+library(Seurat)
+library(ggplot2)
+library(clusterProfiler)
+library(BiocManager)
+library(openxlsx)
+library(scCustomize)
+
+Figure 6A-B, D; Supp figure 2A, C-D; Supp figure 3A 
+
+# Figure 2 ---------------------------------------------------------------
+### Figure 2A: UMAP plots, split by condition 
+### Load RDS object of immune cells integrated from all four conditions (WT uninfected, WT infected, KI uninfected, KI infected) 
+### Immune LRRK2G2019S_D7_V5.annotated.rds object is available on https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE283183 under supplementary files 
+
+Immune <- readRDS(file = "C:\\Users\\jessi\\OneDrive - McGill University\\PhD\\Data\\Single cell\\Immune_LRRK2G2019S_D7 2.0\\Immune LRRK2G2019S_D7		  _V5.annotated.rds")
+
+Immune@meta.data$orig.ident <- factor(x = Immune@meta.data$orig.ident, levels = c("WTuninf", "WTinf", "KIuninf", "KIinf"))
+Idents(object = Immune) <- Immune@meta.data$celltypeV4
+
+DimPlot(Immune, label = FALSE,  cols = c('Monocytes'='#aeadb3', 'NK cells'='#389999', 'Neutrophils'='#6444B4', 'cDC1'='#3F6800', 'cDC2'='#84BECC' ,  'Macrophages' = '#82FE26', 'CD8 T cells'= '#F79932', 'CD4 T cells' = '#F33737', 'B cells' = '#4BCCFF', 'ILCs'='#AB4153', 'gd T cells'='#F68282', 'Eosinophils'='#E6C122'), split.by = "orig.ident")
+
+ggsave("Lrrk2Immune_UMAP.pdf", width = 12, height = 8)
+
+#### Figure 2B: Markers for cluster identification
+
+# Reorder clusters 
+Immune@meta.data$celltypeV4 <- factor(x = Immune@meta.data$celltypeV4, levels = c("Eosinophils", "Neutrophils", "Macrophages", "Monocytes", "cDC1", "cDC2", "NK cells", "ILCs", "gd T cells", "CD4 T cells", "CD8 T cells", "B cells"))
+Idents(object = Immune) <- Immune@meta.data$celltypeV4
+
+DotPlot_scCustom(Immune, features = c("Cd19", "Bank1", "Pax5",
+                                      "Cd8b1", "Cd8a", 
+                                      "Cd4","Cd3d", "Cd3e",
+                                      "Il7r", "Il13", "Il5", "Il4", "Gata3",
+                                      "Kit", "Klrb1b", "Klrk1", 
+                                      "Csflr",  "Cd209a",
+                                      "Itgax", "Itgae","Flt3", "Wdfy4",
+                                      "C1qa", "C1qb", "Cx3cr1", "Adgre1",
+                                      "Sirpa", "Itgam", "Fcgr1",
+                                      "Cd14", "S100a8","Retnlg", "Lcn2",
+                                      "Prg2", "Cd28"), 
+                 x_lab_rotate = TRUE) & coord_flip()
+
+ggsave("Lrrk2Immune_Clustermarkers.pdf", width = 12, height = 8)
+
+#### Figure 2C: Lrrk2 expression plot 
+Idents(object = Immune) <- Immune@meta.data$orig.ident
+DotPlot(Immune, feature = "Lrrk2")
+
+ggsave("Lrrk2_Expressionplot.pdf", width = 5, height = 4)
+
+### Figure 2D: Proportional analysis comparing immune clusters from WTinf vs KIinf 
+library("scProportionTest")
+
+Idents(object = Immune) <- Immune@meta.data$celltypeV4
+DimPlot(Immune)
+prop_test <- sc_utils(Immune)
+prop_test <- permutation_test(
+  prop_test, cluster_identity = "celltypeV4",
+  sample_1 = "WTinf", sample_2 = "KIinf",
+  sample_identity = "orig.ident")
+permutation_plot(prop_test)
+
+ggsave("Immune_Proportionplot_NEW.pdf", width = 6, height = 4)
+
+# Figure 3 ----------------------------------------------------------
+### Figure 3A: Subset out each cell type and complete WT vs KI INF conditions DEG analysis 
+### Heat map was made in Prism by inputting all up and downregulated gene outputs from each cluster after "FindMarkers" analysis 
+
+## Subset out neutrophils 
+Neutrophils <- subset(Immune, ident = "Neutrophils")
+Idents(object = Neutrophils) <- Neutrophils@meta.data$orig.ident
+DimPlot(Neutrophils)
+DimPlot(Neutrophils, split.by = "orig.ident")
+
+DEGinKIinf_Neutrophils<- FindMarkers(Neutrophils, ident.1 = "KIinf", ident.2 = "WTinf", only.pos = FALSE)
+write.xlsx(DEGinKIinf, file = "C:\\Users\\jessi\\OneDrive - McGill University\\PhD\\Data\\Single cell\\Immune_LRRK2G2019S_D7 2.0\\DEG_Neutrophils.xlsx", sheetname = "DEG", append = FALSE, colNames = TRUE, rowNames = TRUE)
+
+### Subset out B cells  
+Bcells <- subset(Immune, ident = "B cells")
+Idents(object = Bcells) <- Bcells@meta.data$orig.ident
+DimPlot(Bcells)
+DimPlot(Bcells, split.by = "orig.ident")
+
+DEGinKIinf <- FindMarkers(Bcells, ident.1 = "KIinf", ident.2 = "WTinf", only.pos = FALSE)
+write.xlsx(DEGinKIinf, file = "C:\\Users\\jessi\\OneDrive - McGill University\\PhD\\Data\\Single cell\\Immune_LRRK2G2019S_D7 2.0\\DEG_B cells.xlsx", sheetname = "DEG", append = FALSE, colNames = TRUE, rowNames = TRUE)
+
+### Subset out CD4 T cells 
+CD4Tcell <- subset(Immune, ident = "CD4 T cells")
+Idents(object = CD4Tcell) <- CD4Tcell@meta.data$orig.ident
+DimPlot(CD4Tcell)
+DimPlot(CD4Tcell, split.by = "orig.ident")
+
+DEGinKIinf <- FindMarkers(CD4Tcell, ident.1 = "KIinf", ident.2 = "WTinf", only.pos = FALSE)
+write.xlsx(DEGinKIinf, file = "C:\\Users\\jessi\\OneDrive - McGill University\\PhD\\Data\\Single cell\\Immune_LRRK2G2019S_D7 2.0\\DEG_CD4Tcells.xlsx", sheetname = "DEG", append = FALSE, colNames = TRUE, rowNames = TRUE)
+
+### Subset out CD8 T cells 
+CD8Tcell <- subset(Immune, ident = "CD8 T cells")
+Idents(object = CD8Tcell) <- CD8Tcell@meta.data$orig.ident
+DimPlot(CD8Tcell)
+DimPlot(CD8Tcell, split.by = "orig.ident")
+
+DEGinKIinf <- FindMarkers(CD8Tcell, ident.1 = "KIinf", ident.2 = "WTinf", only.pos = FALSE)
+write.xlsx(DEGinKIinf, file = "C:\\Users\\jessi\\OneDrive - McGill University\\PhD\\Data\\Single cell\\Immune_LRRK2G2019S_D7 2.0\\DEG_CD8Tcells.xlsx", sheetname = "DEG", append = FALSE, colNames = TRUE, rowNames = TRUE)
+
+### Subset out Eosinophils
+Eosinophils <- subset(Immune, ident = "Eosinophils")
+Idents(object = Eosinophils) <- Eosinophils@meta.data$orig.ident
+DimPlot(Eosinophils)
+DimPlot(Eosinophils, split.by = "orig.ident")
+
+DEGinKIinf <- FindMarkers(Eosinophils, ident.1 = "KIinf", ident.2 = "WTinf", only.pos = FALSE)
+write.xlsx(DEGinKIinf, file = "C:\\Users\\jessi\\OneDrive - McGill University\\PhD\\Data\\Single cell\\Immune_LRRK2G2019S_D7 2.0\\DEG_Eosinophils.xlsx", sheetname = "DEG", append = FALSE, colNames = TRUE, rowNames = TRUE)
+
+### Subset out Monocytes
+Monocytes <- subset(Immune, ident = "Monocytes")
+Idents(object = Monocytes) <- Monocytes@meta.data$orig.ident
+DimPlot(Monocytes)
+DimPlot(Monocytes, split.by = "orig.ident")
+
+DEGinKIinf <- FindMarkers(Monocytes, ident.1 = "KIinf", ident.2 = "WTinf", only.pos = FALSE)
+write.xlsx(DEGinKIinf, file = "C:\\Users\\jessi\\OneDrive - McGill University\\PhD\\Data\\Single cell\\Immune_LRRK2G2019S_D7 2.0\\DEG_Monocytes.xlsx", sheetname = "DEG", append = FALSE, colNames = TRUE, rowNames = TRUE)
+
+### Subset out Macrophages 
+Macrophages <- subset(Immune, ident = "Macrophages")
+Idents(object = Macrophages) <- Macrophages@meta.data$orig.ident
+DimPlot(Macrophages)
+DimPlot(Macrophages, split.by = "orig.ident")
+
+DEGinKIinf <- FindMarkers(Macrophages, ident.1 = "KIinf", ident.2 = "WTinf", only.pos = FALSE)
+write.xlsx(DEGinKIinf, file = "C:\\Users\\jessi\\OneDrive - McGill University\\PhD\\Data\\Single cell\\Immune_LRRK2G2019S_D7 2.0\\DEG_Macrophages.xlsx", sheetname = "DEG", append = FALSE, colNames = TRUE, rowNames = TRUE)
+
+### Subset out cDC1 
+cDC1 <- subset(Immune, ident = "cDC1")
+Idents(object = cDC1) <- cDC1@meta.data$orig.ident
+DimPlot(cDC1)
+DimPlot(cDC1, split.by = "orig.ident")
+
+DEGinKIinf <- FindMarkers(cDC1, ident.1 = "KIinf", ident.2 = "WTinf", only.pos = FALSE)
+write.xlsx(DEGinKIinf, file = "C:\\Users\\jessi\\OneDrive - McGill University\\PhD\\Data\\Single cell\\Immune_LRRK2G2019S_D7 2.0\\DEG_cDC1.xlsx", sheetname = "DEG", append = FALSE, colNames = TRUE, rowNames = TRUE)
+
+### Subset out cDC2  
+cDC2 <- subset(Immune, ident = "cDC2")
+Idents(object = cDC2) <- cDC2@meta.data$orig.ident
+DimPlot(cDC2)
+DimPlot(cDC2, split.by = "orig.ident")
+
+DEGinKIinf <- FindMarkers(cDC2, ident.1 = "KIinf", ident.2 = "WTinf", only.pos = FALSE)
+write.xlsx(DEGinKIinf, file = "C:\\Users\\jessi\\OneDrive - McGill University\\PhD\\Data\\Single cell\\Immune_LRRK2G2019S_D7 2.0\\DEG_cDC2.xlsx", sheetname = "DEG", append = FALSE, colNames = TRUE, rowNames = TRUE)
+
+### Subset out NK     
+NK <- subset(Immune, ident = "NK cells")
+Idents(object = NK) <- NK@meta.data$orig.ident
+DimPlot(NK)
+DimPlot(NK, split.by = "orig.ident")
+
+DEGinKIinf <- FindMarkers(NK, ident.1 = "KIinf", ident.2 = "WTinf", only.pos = FALSE)
+write.xlsx(DEGinKIinf, file = "C:\\Users\\jessi\\OneDrive - McGill University\\PhD\\Data\\Single cell\\Immune_LRRK2G2019S_D7 2.0\\DEG_NK.xlsx", sheetname = "DEG", append = FALSE, colNames = TRUE, rowNames = TRUE)
+
+### Subset out ILCs     
+ILCs <- subset(Immune, ident = "ILCs")
+Idents(object = ILCs) <- ILCs@meta.data$orig.ident
+DimPlot(ILCs)
+DimPlot(ILCs, split.by = "orig.ident")
+
+DEGinKIinf <- FindMarkers(ILCs, ident.1 = "KIinf", ident.2 = "WTinf", only.pos = FALSE)
+write.xlsx(DEGinKIinf, file = "C:\\Users\\jessi\\OneDrive - McGill University\\PhD\\Data\\Single cell\\Immune_LRRK2G2019S_D7 2.0\\DEG_ILCs.xlsx", sheetname = "DEG", append = FALSE, colNames = TRUE, rowNames = TRUE)
+
+### Subset out gdTcells
+gdTcells <- subset(Immune, ident = "gd T cells")
+Idents(object = gdTcells) <- gdTcells@meta.data$orig.ident
+DimPlot(gdTcells)
+DimPlot(gdTcells, split.by = "orig.ident")
+
+DEGinKIinf_gdTcell <- FindMarkers(gdTcells, ident.1 = "KIinf", ident.2 = "WTinf", only.pos = FALSE)
+write.xlsx(DEGinKIinf, file = "C:\\Users\\jessi\\OneDrive - McGill University\\PhD\\Data\\Single cell\\Immune_LRRK2G2019S_D7 2.0\\DEG_gdTcells.xlsx", sheetname = "DEG", append = FALSE, colNames = TRUE, rowNames = TRUE)
+
+# Figure 3B: Neutrophil GO term analysis and cnetplot -----------------------------------------------------
+### To make GO term treeplot, copy DE markers to clipboard from excel file of neutrophil KIinf vs WTinf analysis 
+library(enrichplot)
+library(clusterProfiler)
+
+DEGinKIinf_Neutrophils <- read.table(file = "clipboard", sep = "\t", header = TRUE)
+DEGinKIinf_Neutrophils <- DEGinKIinf_Neutrophils[,1]
+DEGinKIinf_Neutrophils <- enrichGO(DEGinKIinf_Neutrophils, OrgDb = "org.Mm.eg.db", keyType = "SYMBOL", ont = "BP", pvalueCutoff = 0.05, pAdjustMethod = "fdr", qvalueCutoff = 0.2, minGSSize = 2, maxGSSize = 500, readable = TRUE, pool = FALSE)
+
+cluster_summary <- data.frame(DEGinKIinf_Neutrophils)
+DEGinKIinf_Neutrophils <- pairwise_termsim(DEGinKIinf_Neutrophils)
+treeplot(DEGinKIinf_Neutrophils)
+
+ggsave("Neutrophil_GOterm_treeplot.pdf", width = 10, height = 8)
+
+### Making cnetplot 
+cnetplot(DEGinKIinf_Neutrophils, showCategory = 10, layout = "kk", max.overlaps=Inf, foldChange = NULL)
+
+ggsave("Neutrophil_GOterm_cnet.pdf", width = 8, height = 6)
+
+# Figure 6  -----------------------------------------------------------------------------
+### Subsetting out CD4 cluster and re-clustering 
+
+CD4 <- ScaleData(CD4, verbose = FALSE)
+CD4 <- FindVariableFeatures(CD4)
+CD4 <- RunPCA(CD4, npcs = 30, verbose = FALSE)
+CD4 <- RunUMAP(CD4, reduction = "pca", dims = 1:20)
+CD4 <- FindNeighbors(CD4, reduction = "pca", dims = 1:20) 
+CD4 <- FindClusters(CD4, resolution = 0.5)
+DimPlot(CD4, reduction = "umap", split.by = "orig.ident", label = TRUE)
+
+Idents(object = CD4) <- CD4@meta.data$celltypeCD4
+CD4 <- subset(CD4, idents = c("Tnaive", "Th17","Th1"))
+
+CD4 <- NormalizeData(CD4)
+CD4 <- FindVariableFeatures(CD4, nFeatures = 2000)
+CD4 <- ScaleData(CD4)
+CD4 <- RunPCA(CD4)
+CD4 <- FindNeighbors(CD4)
+CD4 <- FindClusters(CD4, resolution = 1)
+CD4 <- RunUMAP(CD4, n.neighbors = 10, dims = 1:30, spread = 2, min.dist = 0.3)
+DimPlot(CD4slingshot, label = TRUE, reduction = "umap", split.by = "orig.ident") 
+
+#Create variables for cell identities
+Th17 <- c("Il17a", "Il17f", "Rorc")
+Tnaive <- c("Cd44", "Sell", "Fas", "Ccr7", "Tcf7") 
+Th1 <- c("Tbx21", "Ifng", "Tnf")
+Th2 <- c("Il4", "Il5", "Ccr4", "Ccr6", "Gata3")
+Treg <-c("Foxp3", "Gzmb", "Ctla4", "Cd73")
+TregIL10pos <-c("Il10")
+NaiveTcell<- c("Tcf7", "Sell")
+
+#Check which seurat cell clusters express cell identity markers
+FeaturePlot(CD4, features = Tnaive) 
+FeaturePlot(CD4, features = Th17) 
+FeaturePlot(CD4, features = Th1) 
+FeaturePlot(CD4, features = Th2) 
+FeaturePlot(CD4, features = Treg) 
+FeaturePlot(CD4, features = TregIL10pos) 
+FeaturePlot(CD4, features = "Fas") 
+FeaturePlot(CD4, features = "Cd44") 
+
+#Create new metadata with Myeloid cell subtype annotations 
+new.cluster.ids <- c("Th1", "TregIL10+", "Th1", "Th17", "Tnaive", "Th17", "Th2", "TregIL10-")
+names(new.cluster.ids) <- levels(CD4)      
+CD4 <- RenameIdents(CD4, new.cluster.ids)
+CD4@meta.data$celltypeTh <- CD4@active.ident   
+
+DefaultAssay(CD4slingshot) <- "RNA"     
+saveRDS(CD4, "C:/Users/jessi/OneDrive - McGill University/PhD/Data/Single cell/Immune_LRRK2G2019S_D7 2.0/Immune LRRK2G2019S_D7_CD4_annotatedV3.rds")
+
+# Figure 6A: CD4 UMAP plot 
+DimPlot(CD4, split.by = "orig.ident") 
+
+# Figure 6B: Dotplot of CD4 markers 
+DotPlot_scCustom(CD4, features = c( "Il10", "Foxp3", 
+                                   "Il17f","Il17a", "Rorc",
+                                   "Il13", "Il5", "Il4","Gata3", 
+                                   "Ifng","Tnf","Tbx21", 
+                                   "Ccr7", "Tcf7"), 
+                 x_lab_rotate = TRUE) & coord_flip()
+
+CD4@meta.data$celltypeTh <- factor(x = CD4@meta.data$celltypeTh, levels = c("Tnaive", "Th1", "Th2", "Th17", "TregIL10-", "TregIL10+"))
+Idents(object = CD4) <-CD4@meta.data$orig.ident
+
+# Figure 6C: Dotplot of Th17 markers 
+Th17 <- subset(CD4, idents = c("Th17"))
+Idents(object = Th17) <-Th17@meta.data$orig.ident
+
+DotPlot(Th17, features = c("Il17a", "Il17f", "Rorc"))
+
+# Supplemental Figure 2A,C-D --------------------------------------------------------------------------------
+### Monocytes reclustering 
+
+Idents(Monocytes) <- "integrated"
+DefaultAssay(Monocytes) <- "integrated"
+
+Monocytes <- ScaleData(Monocytes, verbose = FALSE)
+Monocytes <- FindVariableFeatures(Monocytes)
+Monocytes <- RunPCA(Monocytes, npcs = 30, verbose = FALSE)
+Monocytes <- RunUMAP(Monocytes, reduction = "pca", dims = 1:20)
+Monocytes <- FindNeighbors(Monocytes, reduction = "pca", dims = 1:20) 
+Monocytes <- FindClusters(Monocytes, resolution = 0.5)
+DimPlot(Monocytes, reduction = "umap", split.by = "orig.ident", label = TRUE)
+
+Monocytes@meta.data$orig.ident <- factor(x = Monocytes@meta.data$orig.ident, levels = c("WTuninf", "WTinf", "KIuninf", "KIinf"))
+Idents(object = Monocytes) <- Monocytes@meta.data$orig.ident
+
+#Create new metadata with Myeloid cell subtype annotations 
+new.cluster.ids <- c("Ly6cHigh", "Itgax+", "Ly6cHigh", "Itgax+", "Cx3cr1+", "Cx3cr1+")
+names(new.cluster.ids) <- levels(Monocytes)      
+Monocytes <- RenameIdents(Monocytes, new.cluster.ids)
+Monocytes@meta.data$Monocytesubtype <- Monocytes@active.ident   
+
+saveRDS(Monocytes, file = "C:/Users/jessi/OneDrive - McGill University/PhD/Data/Single cell/Immune_LRRK2G2019S_D7 2.0/Immune LRRK2G2019S_D7_Monocytes.annotatedV1.rds")
+
+# Supplemental Figure 2A - Monocyte GO terms and cnetplot 
+### To make GO term treeplot, copy DE markers to clipboard from excel file of monocyte KIinf vs WTinf analysis 
+
+DEGinKIinf_mono <- read.table(file = "clipboard", sep = "\t", header = TRUE)
+DEGinKIinf_mono <- DEGinKIinf_mono [,1]
+DEGinKIinf_mono <- enrichGO(DEGinKIinf_mono, OrgDb = "org.Mm.eg.db", keyType = "SYMBOL", ont = "BP", pvalueCutoff = 0.05, pAdjustMethod = "fdr", qvalueCutoff = 0.2, minGSSize = 2, maxGSSize = 500, readable = TRUE, pool = FALSE)
+
+cluster_summary <- data.frame(DEGinKIinf_mono)
+DEGinKIinf_mono <- pairwise_termsim(DEGinKIinf_mono)
+treeplot(DEGinKIinf_mono)
+
+ggsave("Monocytes_GOterms.pdf", width = 10, height = 8)
+
+cnetplot(DEGinKIinf_mono, showCategory = 10, layout = "kk", max.overlaps=Inf, foldChange = NULL)
+
+ggsave("Monocytes_GOterms_cnet.pdf", width = 10, height = 6)
+
+# Supp Figure 2C - UMAP of monocyte subclusters 
+DimPlot(Monocytes, split.by = orig.ident)
+
+# Supp Figure 2D - Monocyte lineage permutation analysis 
+Idents(object = Monocyte) <- Monocyte@meta.data$Monocytesubtype
+DimPlot(Monocyte)
+prop_test <- sc_utils(Monocyte)
+prop_test <- permutation_test(
+  prop_test, cluster_identity = "Monocytesubtype",
+  sample_1 = "WTinf", sample_2 = "KIinf",
+  sample_identity = "orig.ident")
+permutation_plot(prop_test)
+
+# Supplemental Figure 3A ----------------------------------------------------------------
+### To make GO term treeplot, copy DE markers to clipboard from excel file of gdTcell KIinf vs WTinf analysis 
+
+DEGinKIinf_gdTcell <- read.table(file = "clipboard", sep = "\t", header = TRUE)
+DEGinKIinf_gdTcell <- DEGinKIinf_gdTcell [,1]
+DEGinKIinf_gdTcell <- enrichGO(DEGinKIinf_gdTcell, OrgDb = "org.Mm.eg.db", keyType = "SYMBOL", ont = "BP", pvalueCutoff = 0.05, pAdjustMethod = "fdr", qvalueCutoff = 0.2, minGSSize = 2, maxGSSize = 500, readable = TRUE, pool = FALSE)
+
+cluster_summary <- data.frame(DEGinKIinf_gdTcell)
+DEGinKIinf_gdTcell <- pairwise_termsim(DEGinKIinf_gdTcell)
+treeplot(DEGinKIinf_gdTcell)
+
+ggsave("gdTcells_GOterms.pdf", width = 10, height = 8)
+
+cnetplot(DEGinKIinf, showCategory = 10, layout = "kk", max.overlaps=Inf, foldChange = NULL)
+
+ggsave("gdTcells_GOterms_cnet.pdf", width = 10, height = 6)
