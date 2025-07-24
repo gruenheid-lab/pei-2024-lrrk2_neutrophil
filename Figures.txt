@@ -6,8 +6,6 @@ library(BiocManager)
 library(openxlsx)
 library(scCustomize)
 
-Figure 6A-B, D; Supp figure 2A, C-D; Supp figure 3A 
-
 # Figure 2 ---------------------------------------------------------------
 ### Figure 2A: UMAP plots, split by condition 
 ### Load RDS object of immune cells integrated from all four conditions (WT uninfected, WT infected, KI uninfected, KI infected) 
@@ -23,7 +21,6 @@ DimPlot(Immune, label = FALSE,  cols = c('Monocytes'='#aeadb3', 'NK cells'='#389
 ggsave("Lrrk2Immune_UMAP.pdf", width = 12, height = 8)
 
 #### Figure 2B: Markers for cluster identification
-
 # Reorder clusters 
 Immune@meta.data$celltypeV4 <- factor(x = Immune@meta.data$celltypeV4, levels = c("Eosinophils", "Neutrophils", "Macrophages", "Monocytes", "cDC1", "cDC2", "NK cells", "ILCs", "gd T cells", "CD4 T cells", "CD8 T cells", "B cells"))
 Idents(object = Immune) <- Immune@meta.data$celltypeV4
@@ -31,7 +28,7 @@ Idents(object = Immune) <- Immune@meta.data$celltypeV4
 DotPlot_scCustom(Immune, features = c("Cd19", "Bank1", "Pax5",
                                       "Cd8b1", "Cd8a", 
                                       "Cd4","Cd3d", "Cd3e",
-                                      "Il7r", "Il13", "Il5", "Il4", "Gata3",
+                                      "Il7r", "Il13", "Il5", "Il4","Gata3",
                                       "Kit", "Klrb1b", "Klrk1", 
                                       "Csflr",  "Cd209a",
                                       "Itgax", "Itgae","Flt3", "Wdfy4",
@@ -61,7 +58,7 @@ prop_test <- permutation_test(
   sample_identity = "orig.ident")
 permutation_plot(prop_test)
 
-ggsave("Immune_Proportionplot_NEW.pdf", width = 6, height = 4)
+ggsave("Immune_Proportionplot.pdf", width = 6, height = 4)
 
 # Figure 3 ----------------------------------------------------------
 ### Figure 3A: Subset out each cell type and complete WT vs KI INF conditions DEG analysis 
@@ -175,7 +172,7 @@ DimPlot(gdTcells, split.by = "orig.ident")
 DEGinKIinf_gdTcell <- FindMarkers(gdTcells, ident.1 = "KIinf", ident.2 = "WTinf", only.pos = FALSE)
 write.xlsx(DEGinKIinf, file = "C:\\Users\\jessi\\OneDrive - McGill University\\PhD\\Data\\Single cell\\Immune_LRRK2G2019S_D7 2.0\\DEG_gdTcells.xlsx", sheetname = "DEG", append = FALSE, colNames = TRUE, rowNames = TRUE)
 
-# Figure 3B: Neutrophil GO term analysis and cnetplot -----------------------------------------------------
+### Figure 3B: Neutrophil GO term analysis and cnetplot 
 ### To make GO term treeplot, copy DE markers to clipboard from excel file of neutrophil KIinf vs WTinf analysis 
 library(enrichplot)
 library(clusterProfiler)
@@ -237,19 +234,19 @@ FeaturePlot(CD4, features = TregIL10pos)
 FeaturePlot(CD4, features = "Fas") 
 FeaturePlot(CD4, features = "Cd44") 
 
-#Create new metadata with Myeloid cell subtype annotations 
+#Create new metadata with CD4 cell subtype annotations 
 new.cluster.ids <- c("Th1", "TregIL10+", "Th1", "Th17", "Tnaive", "Th17", "Th2", "TregIL10-")
 names(new.cluster.ids) <- levels(CD4)      
 CD4 <- RenameIdents(CD4, new.cluster.ids)
 CD4@meta.data$celltypeTh <- CD4@active.ident   
 
-DefaultAssay(CD4slingshot) <- "RNA"     
+DefaultAssay(CD4) <- "RNA"     
 saveRDS(CD4, "C:/Users/jessi/OneDrive - McGill University/PhD/Data/Single cell/Immune_LRRK2G2019S_D7 2.0/Immune LRRK2G2019S_D7_CD4_annotatedV3.rds")
 
-# Figure 6A: CD4 UMAP plot 
+### Figure 6A: CD4 UMAP plot 
 DimPlot(CD4, split.by = "orig.ident") 
 
-# Figure 6B: Dotplot of CD4 markers 
+### Figure 6B: Dotplot of CD4 markers 
 DotPlot_scCustom(CD4, features = c( "Il10", "Foxp3", 
                                    "Il17f","Il17a", "Rorc",
                                    "Il13", "Il5", "Il4","Gata3", 
@@ -260,14 +257,26 @@ DotPlot_scCustom(CD4, features = c( "Il10", "Foxp3",
 CD4@meta.data$celltypeTh <- factor(x = CD4@meta.data$celltypeTh, levels = c("Tnaive", "Th1", "Th2", "Th17", "TregIL10-", "TregIL10+"))
 Idents(object = CD4) <-CD4@meta.data$orig.ident
 
-# Figure 6C: Dotplot of Th17 markers 
+### Figure 6D: Dotplot of Th17 markers 
 Th17 <- subset(CD4, idents = c("Th17"))
 Idents(object = Th17) <-Th17@meta.data$orig.ident
 
 DotPlot(Th17, features = c("Il17a", "Il17f", "Rorc"))
 
-# Supplemental Figure 2A,C-D --------------------------------------------------------------------------------
-### Monocytes reclustering 
+# Supplemental Figure 2A,B --------------------------------------------------------------------------------
+# LRRK2 expression featureplot and dotplot 
+
+FeaturePlot(Immune, feature = "Lrrk2", split.by = "orig.ident") & theme (legend.position = c(1,0.9))
+ggsave("Immune_Lrrk2expression_Featureplot.pdf", width = 12, height = 5)
+
+DotPlot(Immune, feature = "Lrrk2", split.by = "orig.ident", cols=c(rep("blue",4), "white")) + coord_flip() + theme(axis.text.x = element_text(angle=90), legend.position = "right")
+ggsave("Immune_Lrrk2expression_Dotplot.pdf",width = 12, height = 4)
+
+
+# Supplemental Figure 5A,C-D --------------------------------------------------------------------------------
+
+Monocytes <- subset(Immune, ident = "Monocytes")
+Idents(object = Monocytes) <- Monocytes@meta.data$orig.ident
 
 Idents(Monocytes) <- "integrated"
 DefaultAssay(Monocytes) <- "integrated"
@@ -280,18 +289,25 @@ Monocytes <- FindNeighbors(Monocytes, reduction = "pca", dims = 1:20)
 Monocytes <- FindClusters(Monocytes, resolution = 0.5)
 DimPlot(Monocytes, reduction = "umap", split.by = "orig.ident", label = TRUE)
 
-Monocytes@meta.data$orig.ident <- factor(x = Monocytes@meta.data$orig.ident, levels = c("WTuninf", "WTinf", "KIuninf", "KIinf"))
-Idents(object = Monocytes) <- Monocytes@meta.data$orig.ident
+Idents(Monocytes) <- "RNA"
+DefaultAssay(Monocytes) <- "RNA"
 
-#Create new metadata with Myeloid cell subtype annotations 
-new.cluster.ids <- c("Ly6cHigh", "Itgax+", "Ly6cHigh", "Itgax+", "Cx3cr1+", "Cx3cr1+")
+Idents(object = Monocytes) <- Monocytes@meta.data$seurat_clusters
+FeaturePlot(Monocytes, features = "Ly6c2")
+FeaturePlot(Monocytes, features = "Itgax")
+FeaturePlot(Monocytes, features = "Cx3cr1")
+
+saveRDS(Monocytes, file = "C:/Users/jessi/OneDrive - McGill University/PhD/Data/Single cell/Immune_LRRK2G2019S_D7 2.0/Immune LRRK2G2019S_D7_Monocytes.unannotated.rds")
+
+#Create new metadata to labal Ly6c2 High monocytes 
+new.cluster.ids <- c("Ly6c2High", "Ly6c2Low", "Ly6c2Low", "Ly6c2High", "Ly6c2Low")
 names(new.cluster.ids) <- levels(Monocytes)      
 Monocytes <- RenameIdents(Monocytes, new.cluster.ids)
 Monocytes@meta.data$Monocytesubtype <- Monocytes@active.ident   
 
 saveRDS(Monocytes, file = "C:/Users/jessi/OneDrive - McGill University/PhD/Data/Single cell/Immune_LRRK2G2019S_D7 2.0/Immune LRRK2G2019S_D7_Monocytes.annotatedV1.rds")
 
-# Supplemental Figure 2A - Monocyte GO terms and cnetplot 
+# Supp Figure 5A: Monocyte GO terms and cnetplot 
 ### To make GO term treeplot, copy DE markers to clipboard from excel file of monocyte KIinf vs WTinf analysis 
 
 DEGinKIinf_mono <- read.table(file = "clipboard", sep = "\t", header = TRUE)
@@ -308,20 +324,16 @@ cnetplot(DEGinKIinf_mono, showCategory = 10, layout = "kk", max.overlaps=Inf, fo
 
 ggsave("Monocytes_GOterms_cnet.pdf", width = 10, height = 6)
 
-# Supp Figure 2C - UMAP of monocyte subclusters 
+# Supp Figure 5C - UMAP of monocyte subclusters 
 DimPlot(Monocytes, split.by = orig.ident)
 
-# Supp Figure 2D - Monocyte lineage permutation analysis 
-Idents(object = Monocyte) <- Monocyte@meta.data$Monocytesubtype
-DimPlot(Monocyte)
-prop_test <- sc_utils(Monocyte)
-prop_test <- permutation_test(
-  prop_test, cluster_identity = "Monocytesubtype",
-  sample_1 = "WTinf", sample_2 = "KIinf",
-  sample_identity = "orig.ident")
-permutation_plot(prop_test)
+# Supp Figure 5D - Monocyte lineage permutation analysis 
+# Use values generated in table to create graphs based on Ly6c2High population vs. total immunocyte population 
+table(Monocyte@meta.data$orig.ident, Monocyte@meta.data$Monocytesubtype)
+table(Immune@meta.data$orig.ident, Immune@meta.data$celltypeV4)
 
-# Supplemental Figure 3A ----------------------------------------------------------------
+
+# Supplemental Figure 6 ----------------------------------------------------------------
 ### To make GO term treeplot, copy DE markers to clipboard from excel file of gdTcell KIinf vs WTinf analysis 
 
 DEGinKIinf_gdTcell <- read.table(file = "clipboard", sep = "\t", header = TRUE)
@@ -337,3 +349,101 @@ ggsave("gdTcells_GOterms.pdf", width = 10, height = 8)
 cnetplot(DEGinKIinf, showCategory = 10, layout = "kk", max.overlaps=Inf, foldChange = NULL)
 
 ggsave("gdTcells_GOterms_cnet.pdf", width = 10, height = 6)
+
+
+# Supplemental Figure 7 ----------------------------------------------------------------
+### Cellchat analysis figures 
+
+library(CellChat)
+library(patchwork)
+library(Seurat)
+library(dplyr)
+library(ggplot2)
+library(openxlsx)
+library(BiocNeighbors)
+library(circlize)
+
+### Subset out WTinf and KIinf conditions only 
+Idents(Immune) <- Immune@meta.data$orig.ident
+
+WTinf <- subset(Immune, idents = "WTinf")
+DimPlot(WTinf)
+
+KIinf <- subset(Immune, idents = "KIinf")
+DimPlot(KIinf)
+
+### Create WT cellchat object 
+cellchat_WT <- createCellChat(object = WTinf, group.by = "celltypeV4")
+
+### Select the L-R interaction database 
+CellChatDB <- CellChatDB.mouse 
+showDatabaseCategory(CellChatDB)
+dplyr::glimpse(CellChatDB$interaction)
+
+CellChatDB.use <- CellChatDB
+cellchat_WT@DB <- CellChatDB.use
+cellchat_WT <- subsetData(cellchat_WT)
+
+future::plan("multisession", workers = 4)
+cellchat_WT <- identifyOverExpressedGenes(cellchat_WT, thresh.p = 0.05)
+cellchat_WT <- identifyOverExpressedInteractions(cellchat_WT)
+
+cellchat_WT <- projectData(cellchat_WT, PPI.mouse)
+cellchat_WT <- computeCommunProb(cellchat_WT, type = "triMean", trim = NULL, raw.use = FALSE)
+cellchat_WT <- filterCommunication(cellchat_WT, min.cells = 10)
+cellchat_WT <- computeCommunProbPathway(cellchat_WT)
+cellchat_WT <- aggregateNet(cellchat_WT)
+
+saveRDS(cellchat_WT, file = "C:\\Users\\jessi\\OneDrive - McGill University\\PhD\\Data\\Single cell\\Immune_LRRK2G2019S_D7 2.0\\Immune LRRK2G2019S_D7_cellchatWT0.05_NEW.rds")
+
+### Create KI cellchat object 
+cellchat_KI <- createCellChat(object = KIinf, group.by = "celltypeV4")
+
+### Select the L-R interaction database 
+CellChatDB.use <- CellChatDB
+cellchat_KI@DB <- CellChatDB.use
+cellchat_KI <- subsetData(cellchat_KI)
+
+future::plan("multisession", workers = 4)
+cellchat_KI <- identifyOverExpressedGenes(cellchat_KI, thresh.p = 0.05)
+cellchat_KI <- identifyOverExpressedInteractions(cellchat_KI)
+
+cellchat_KI <- projectData(cellchat_KI, PPI.mouse)
+cellchat_KI <- computeCommunProb(cellchat_KI, type = "triMean", trim = NULL, raw.use = FALSE)
+cellchat_KI <- filterCommunication(cellchat_KI, min.cells = 10)
+cellchat_KI <- computeCommunProbPathway(cellchat_KI)
+cellchat_KI <- aggregateNet(cellchat_KI)
+
+saveRDS(cellchat_KI, file = "C:\\Users\\jessi\\OneDrive - McGill University\\PhD\\Data\\Single cell\\Immune_LRRK2G2019S_D7 2.0\\Immune LRRK2G2019S_D7_cellchatKI0.05_NEW.rds")
+
+#### Merge cell chat objects 
+cellchat_WT <- readRDS(file = "C:\\Users\\jessi\\OneDrive - McGill University\\PhD\\Data\\Single cell\\Immune_LRRK2G2019S_D7 2.0\\Immune LRRK2G2019S_D7_cellchatWT0.05_NEW.rds")
+cellchat_KI <- readRDS(file = "C:\\Users\\jessi\\OneDrive - McGill University\\PhD\\Data\\Single cell\\Immune_LRRK2G2019S_D7 2.0\\Immune LRRK2G2019S_D7_cellchatKI0.05_NEW.rds")
+object.list <- list(WT = cellchat_WT, KI = cellchat_KI)
+cellchat <- mergeCellChat(object.list, add.names = names(object.list))
+
+### Save object.list and merged object 
+saveRDS(object.list, file = "C:\\Users\\jessi\\OneDrive - McGill University\\PhD\\Data\\Single cell\\Immune_LRRK2G2019S_D7 2.0\\Immune LRRK2G2019S_D7_cellchatobject.list.rds")
+saveRDS(cellchat, file = "C:\\Users\\jessi\\OneDrive - McGill University\\PhD\\Data\\Single cell\\Immune_LRRK2G2019S_D7 2.0\\Immune LRRK2G2019S_D7_cellchatMERGED.rds")
+
+### Supp figure 7A-B: Comparative analysis between WT and G2019S infected conditions using (A) net total interactions between all cell types or (B) net strength of interactions. 
+### Compute the maximum number of cells per cell group and the maximum number of interactions across all datasets
+
+pdf(file = "Number of interactions WT vs KI_circleplot.pdf", width = 12, height = 8)
+weight.max <- getMaxWeight(object.list, attribute = c("idents","count"))
+par(mfrow = c(1,2), xpd=TRUE)
+for (i in 1:length(object.list)) {
+  netVisual_circle(object.list[[i]]@net$count, weight.scale = T, label.edge= F, edge.weight.max = weight.max[2], edge.width.max = 12, title.name = paste0("Number of interactions - ", names(object.list)[i]))
+}
+
+pdf(file = "Weight of interactions WT vs KI_circleplot.pdf", width = 12, height = 8)
+weight.max <- getMaxWeight(object.list, attribute = c("idents","weight"))
+par(mfrow = c(1,2), xpd=TRUE)
+for (i in 1:length(object.list)) {
+  netVisual_circle(object.list[[i]]@net$weight, weight.scale = T, label.edge= F, edge.weight.max = weight.max[2], edge.width.max = 12, title.name = paste0("Weight of interactions - ", names(object.list)[i]))
+}
+
+### Supp Figure 7C: RankNet analysis 
+pdf(file ="Ranknetsignalingpathways.pdf", width = 12, height = 8)
+gg1 <- rankNet(cellchat, mode = "comparison", measure = "weight", sources.use = NULL, targets.use = NULL, stacked = F, do.stat = TRUE, )
+gg1 
